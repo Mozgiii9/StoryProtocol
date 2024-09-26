@@ -39,7 +39,6 @@ echo "============================================================"
 NODE="story"
 DAEMON_HOME="$HOME/.story/story"
 DAEMON_NAME="story"
-PORT=335  # Базовый порт, который будем использовать для изменений
 
 if [ -d "$DAEMON_HOME" ]; then
     new_folder_name="${DAEMON_HOME}_$(date +"%Y%m%d_%H%M%S")"
@@ -49,6 +48,32 @@ fi
 if [ ! $VALIDATOR ]; then
     read -p "Введите имя валидатора: " VALIDATOR
     echo 'export VALIDATOR='\"${VALIDATOR}\" >> $HOME/.bash_profile
+fi
+
+# Ввод портов пользователем
+read -p "Введите порт для P2P (по умолчанию 26656): " P2P_PORT
+P2P_PORT=${P2P_PORT:-26656}  # Если ввод пустой, используется порт по умолчанию 26656
+
+read -p "Введите порт для RPC (по умолчанию 26657): " RPC_PORT
+RPC_PORT=${RPC_PORT:-26657}  # Если ввод пустой, используется порт по умолчанию 26657
+
+read -p "Введите порт для API (по умолчанию 1317): " API_PORT
+API_PORT=${API_PORT:-1317}  # Если ввод пустой, используется порт по умолчанию 1317
+
+# Проверяем занятость портов и предупреждаем пользователя, если порты уже используются
+if ss -tulpen | awk '{print $5}' | grep -q ":$P2P_PORT$" ; then
+    echo -e "\e[31mПорт $P2P_PORT уже занят.\e[39m"
+    exit 1  # Прекращаем выполнение, чтобы избежать конфликта
+fi
+
+if ss -tulpen | awk '{print $5}' | grep -q ":$RPC_PORT$" ; then
+    echo -e "\e[31mПорт $RPC_PORT уже занят.\e[39m"
+    exit 1
+fi
+
+if ss -tulpen | awk '{print $5}' | grep -q ":$API_PORT$" ; then
+    echo -e "\e[31mПорт $API_PORT уже занят.\e[39m"
+    exit 1
 fi
 
 # Обновление
@@ -123,7 +148,7 @@ After=network-online.target
 [Service]
 User=$USER
 WorkingDirectory=$HOME/.story/story
-ExecStart=/usr/local/bin/story run 
+ExecStart=/usr/local/bin/story run
 Restart=always
 RestartSec=3
 LimitNOFILE=infinity
@@ -150,28 +175,20 @@ lz4 -c -d story_snapshot.lz4 | tar -x -C $HOME/.story/story
 sudo rm -v geth_snapshot.lz4
 sudo rm -v story_snapshot.lz4
 
-# Проверка портов и их изменение при необходимости
-if ss -tulpen | awk '{print $5}' | grep -q ":26656$" ; then
-    echo -e "\e[31mПорт 26656 уже занят.\e[39m"
-    sleep 2
-    sed -i -e "s|:26656\"|:${PORT}56\"|g" $DAEMON_HOME/config/config.toml
-    echo -e "\n\e[42mПорт 26656 изменен на ${PORT}56.\e[0m\n"
-    sleep 2
-fi
-if ss -tulpen | awk '{print $5}' | grep -q ":26657$" ; then
-    echo -e "\e[31mПорт 26657 уже занят.\e[39m"
-    sleep 2
-    sed -i -e "s|:26657\"|:${PORT}57\"|" $DAEMON_HOME/config/config.toml
-    echo -e "\n\e[42mПорт 26657 изменен на ${PORT}57.\e[0m\n"
-    sleep 2
-fi
-if ss -tulpen | awk '{print $5}' | grep -q ":1317$" ; then
-    echo -e "\e[31mПорт 1317 уже занят.\e[39m"
-    sleep 2
-    sed -i -e "s|:1317\"|:${PORT}17\"|" $DAEMON_HOME/config/story.toml
-    echo -e "\n\e[42mПорт 1317 изменен на ${PORT}17.\e[0m\n"
-    sleep 2
-fi
+# Запись указанных портов в файл конфигурации story.toml
+cat > $DAEMON_HOME/config/story.toml <<EOF
+# Конфигурация для Story node
+[p2p]
+laddr = "tcp://0.0.0.0:$P2P_PORT"
+
+[rpc]
+laddr = "tcp://0.0.0.0:$RPC_PORT"
+
+[api]
+address = "tcp://0.0.0.0:$API_PORT"
+EOF
+
+echo -e "\n\e[42mПорты сохранены в story.toml: P2P=$P2P_PORT, RPC=$RPC_PORT, API=$API_PORT.\e[0m\n"
 
 # Запуск сервиса
 sudo systemctl restart systemd-journald
