@@ -100,10 +100,10 @@ story version
 
 cd $HOME
 rm -rf story-geth
-wget -O geth-linux-amd64-0.9.2-ea9f0d2.tar.gz https://story-geth-binaries.s3.us-west-1.amazonaws.com/geth-public/geth-linux-amd64-0.9.2-ea9f0d2.tar.gz 
-tar xvf geth-linux-amd64-0.9.2-ea9f0d2.tar.gz
-sudo chmod +x geth-linux-amd64-0.9.2-ea9f0d2/geth
-sudo mv geth-linux-amd64-0.9.2-ea9f0d2/geth /usr/local/bin/story-geth
+wget -O geth-linux-amd64-0.9.3-b224fdf.tar.gz https://story-geth-binaries.s3.us-west-1.amazonaws.com/geth-public/geth-linux-amd64-0.9.3-b224fdf.tar.gz 
+tar xvf geth-linux-amd64-0.9.3-b224fdf.tar.gz
+sudo chmod +x geth-linux-amd64-0.9.3-b224fdf/geth
+sudo mv geth-linux-amd64-0.9.3-b224fdf/geth /usr/local/bin/story-geth
 
 # Инициализация
 $DAEMON_NAME init --network iliad  --moniker "${VALIDATOR}"
