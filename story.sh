@@ -91,11 +91,12 @@ sleep 1
 
 # Загрузка бинарного файла
 cd $HOME
-sudo rm -rf story
-wget -O story-linux-amd64-0.10.0-9603826.tar.gz https://story-geth-binaries.s3.us-west-1.amazonaws.com/story-public/story-linux-amd64-0.10.0-9603826.tar.gz
-tar xvf story-linux-amd64-0.10.0-9603826.tar.gz
-sudo chmod +x story-linux-amd64-0.10.0-9603826/story
-sudo mv story-linux-amd64-0.10.0-9603826/story /usr/local/bin/
+rm -rf story
+git clone https://github.com/piplabs/story
+cd $HOME/story
+git checkout v0.11.0
+go build -o story ./client
+sudo mv $HOME/story/story $(which story)
 story version
 
 cd $HOME
@@ -113,14 +114,14 @@ $DAEMON_NAME validator export --export-evm-key >>$HOME/.story/story/config/walle
 cat $HOME/.story/.env >>$HOME/.story/story/config/wallet.txt
 
 # Загрузка genesis и addrbook
-wget -O $HOME/.story/story/config/addrbook.json https://raw.githubusercontent.com/McDaan/general/main/story/addrbook.json
+wget -O $HOME/.story/story/config/genesis.json https://server-3.itrocket.net/testnet/story/genesis.json
+wget -O $HOME/.story/story/config/addrbook.json  https://server-3.itrocket.net/testnet/story/addrbook.json
 
 # Установка пиров и сидов
-PEERS=$(curl -sS https://story-rpc.mandragora.io/net_info | jq -r '.result.peers[] | "\(.node_info.id)@\(.remote_ip):\(.node_info.listen_addr)"' | awk -F ':' '{print $1":"$(NF)}' | paste -sd, -)
-sed -i.bak -e "s/^persistent_peers *=.*/persistent_peers = \"$PEERS\"/" $HOME/.story/story/config/config.toml
-
-SEEDS=6a07e2f396519b55ea05f195bac7800b451983c0@story-seed.mandragora.io:26656,51ff395354c13fab493a03268249a74860b5f9cc@story-testnet-seed.itrocket.net:26656,5d7507dbb0e04150f800297eaba39c5161c034fe@135.125.188.77:26656
-sed -i.bak -e "s/^seeds *=.*/seeds = \"$SEEDS\"/" $HOME/.story/story/config/config.toml
+SEEDS="51ff395354c13fab493a03268249a74860b5f9cc@story-testnet-seed.itrocket.net:26656"
+PEERS="2f372238bf86835e8ad68c0db12351833c40e8ad@story-testnet-peer.itrocket.net:26656,343507f6105c8ebced67765e6d5bf54bc2117371@38.242.234.33:26656,de6a4d04aab4e22abea41d3a4cf03f3261422da7@65.109.26.242:25556,7844c54e061b42b9ed629b82f800f2a0055b806d@37.27.131.251:26656,1d3a0e76b5cdf550e8a0351c9c8cd9b5285be8a2@77.237.241.33:26656,f1ec81f4963e78d06cf54f103cb6ca75e19ea831@217.76.159.104:26656,2027b0adffea21f09d28effa3c09403979b77572@198.178.224.25:26656,118f21ef834f02ab91e3fc3e537110efb4c1c0ac@74.118.140.190:26656,8876a2351818d73c73d97dcf53333e6b7a58c114@3.225.157.207:26656,caf88cbcd0628188999104f5ea6a5eed4a34422c@178.63.184.134:26656,7f72d44f3d448fd44485676795b5cb3b62bf5af0@142.132.135.125:20656"
+sed -i -e "/^\[p2p\]/,/^\[/{s/^[[:space:]]*seeds *=.*/seeds = \"$SEEDS\"/}" \
+       -e "/^\[p2p\]/,/^\[/{s/^[[:space:]]*persistent_peers *=.*/persistent_peers = \"$PEERS\"/}" $HOME/.story/story/config/config.toml
 
 # Создание сервиса
 sudo tee /etc/systemd/system/story-geth.service > /dev/null <<EOF  
